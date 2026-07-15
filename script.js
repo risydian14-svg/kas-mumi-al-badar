@@ -942,9 +942,38 @@ function closeWAReminder() {
     document.getElementById('wa-reminder-modal').classList.remove('active');
 }
 
+// ==================== DEFAULT MEMBERS ====================
+function initDefaultMembers() {
+    const existing = JSON.parse(localStorage.getItem('kasku_members') || '[]');
+    if (existing.length > 0) return;
+
+    const defaultMembers = [
+        "Abdul Malik Z", "Afnan Labid Firdaus", "Ainur Dina Aisah",
+        "Almahira Ayu M", "Azzaria Ayu S", "Firli Safina Z",
+        "Kresna Adinata", "M. Naufal Risydian", "M. Praja Bangun P",
+        "M. Bagus Ardy Nugraha", "Nadirat Raka H", "Novira Ramadhani S",
+        "Rifaul Jannah", "Saefadhli Khoiri", "Salsabila Khoirunisa",
+        "Sylvani Humaira H", "Zahrani Tazkia", "Ziyad Naizar K",
+        "Zulfa Zahira", "Hisyam Alfarisi"
+    ];
+
+    const members = defaultMembers.map((name, i) => ({
+        id: Date.now() + i,
+        name: name,
+        phone: "",
+        category: "pelajar",
+        amount: 10000,
+        active: true,
+        createdAt: new Date().toISOString()
+    }));
+
+    localStorage.setItem('kasku_members', JSON.stringify(members));
+}
+
 // ==================== INIT ====================
 document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('tx-date').value = new Date().toISOString().split('T')[0];
     document.getElementById('kas-month').value = new Date().toISOString().substring(0, 7);
+    initDefaultMembers();
     checkSession();
 });
