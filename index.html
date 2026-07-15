@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kas Mumi Al-Badar - Kelola Uang Kas</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body>
+
+<!-- ==================== LANDING PAGE ==================== -->
+<div id="page-landing" class="page active">
+    <nav class="landing-nav">
+        <div class="logo"><i class="fas fa-wallet"></i> Kas Mumi Al-Badar</div>
+        <div class="nav-links">
+            <a href="#" onclick="showPage('page-login')">Masuk</a>
+        </div>
+    </nav>
+
+    <section class="hero">
+        <div class="hero-text">
+            <h1>Kelola Uang Kas<br><span>Mudah & Cepat</span></h1>
+            <p>Catat pemasukan dan pengeluaran kas harianmu dalam satu tempat. Pantau keuanganmu kapan saja, di mana saja.</p>
+            <button class="btn-primary" onclick="showPage('page-login')">Masuk Sebagai Admin <i class="fas fa-arrow-right"></i></button>
+        </div>
+        <div class="hero-image">
+            <div class="card-float c1"><i class="fas fa-arrow-down"></i> Pemasukan</div>
+            <div class="card-float c2"><i class="fas fa-arrow-up"></i> Pengeluaran</div>
+            <div class="card-float c3"><i class="fas fa-chart-line"></i> Laporan</div>
+            <div class="hero-circle"></div>
+        </div>
+    </section>
+
+    <section class="features">
+        <h2>Kenapa Pakai Kas Mumi Al-Badar?</h2>
+        <div class="feature-grid">
+            <div class="feature-card">
+                <i class="fas fa-plus-circle"></i>
+                <h3>Catat Transaksi</h3>
+                <p>Tambah pemasukan dan pengeluaran hanya dalam hitungan detik.</p>
+            </div>
+            <div class="feature-card">
+                <i class="fas fa-chart-pie"></i>
+                <h3>Laporan Realtime</h3>
+                <p>Lihat ringkasan keuangan langsung secara otomatis.</p>
+            </div>
+            <div class="feature-card">
+                <i class="fas fa-shield-alt"></i>
+                <h3>Aman & Privat</h3>
+                <p>Data tersimpan di browser kamu, tidak ada yang bisa mengakses.</p>
+            </div>
+        </div>
+    </section>
+
+    <footer class="landing-footer">
+        <p>&copy; 2026 Kas Mumi Al-Badar. Dibuat dengan <i class="fas fa-heart" style="color:#e74c3c"></i></p>
+    </footer>
+</div>
+
+<!-- ==================== LOGIN ==================== -->
+<div id="page-login" class="page">
+    <div class="auth-container">
+        <div class="auth-card">
+            <div class="auth-header">
+                <i class="fas fa-shield-alt auth-icon"></i>
+                <h2>Masuk Admin</h2>
+                <p>Hanya admin yang dapat mengakses sistem ini</p>
+            </div>
+            <form id="form-login" onsubmit="handleLogin(event)">
+                <div class="input-group">
+                    <label>Email</label>
+                    <input type="email" id="login-email" placeholder="email@contoh.com" required>
+                </div>
+                <div class="input-group">
+                    <label>Password</label>
+                    <input type="password" id="login-password" placeholder="Masukkan password" required>
+                </div>
+                <button type="submit" class="btn-primary btn-full"><i class="fas fa-sign-in-alt"></i> Masuk</button>
+            </form>
+            <p class="auth-switch" id="login-setup-link" style="display:none">Belum punya akun admin? <a href="#" onclick="showPage('page-setup')">Buat Akun Admin</a></p>
+            <button class="btn-back" onclick="showPage('page-landing')"><i class="fas fa-arrow-left"></i> Kembali</button>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== ADMIN SETUP ==================== -->
+<div id="page-setup" class="page">
+    <div class="auth-container">
+        <div class="auth-card">
+            <div class="auth-header">
+                <i class="fas fa-user-shield auth-icon"></i>
+                <h2>Setup Admin</h2>
+                <p>Buat akun admin untuk pertama kali</p>
+            </div>
+            <form id="form-setup" onsubmit="handleSetup(event)">
+                <div class="input-group">
+                    <label>Nama Admin</label>
+                    <input type="text" id="setup-name" placeholder="Nama admin" required>
+                </div>
+                <div class="input-group">
+                    <label>Email Admin</label>
+                    <input type="email" id="setup-email" placeholder="admin@contoh.com" required>
+                </div>
+                <div class="input-group">
+                    <label>Password</label>
+                    <input type="password" id="setup-password" placeholder="Minimal 6 karakter" minlength="6" required>
+                </div>
+                <div class="input-group">
+                    <label>Konfirmasi Password</label>
+                    <input type="password" id="setup-confirm" placeholder="Ulangi password" minlength="6" required>
+                </div>
+                <button type="submit" class="btn-primary btn-full"><i class="fas fa-check"></i> Buat Akun Admin</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== DASHBOARD ==================== -->
+<div id="page-dashboard" class="page">
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <i class="fas fa-wallet"></i>
+            <span>Kas Mumi Al-Badar</span>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="#" class="nav-item active" onclick="switchTab('tab-dashboard', this)"><i class="fas fa-home"></i> Dashboard</a>
+            <a href="#" class="nav-item" onclick="switchTab('tab-add', this)"><i class="fas fa-plus-circle"></i> Tambah Transaksi</a>
+            <a href="#" class="nav-item" onclick="switchTab('tab-history', this)"><i class="fas fa-history"></i> Riwayat</a>
+            <a href="#" class="nav-item" onclick="switchTab('tab-report', this)"><i class="fas fa-chart-bar"></i> Laporan</a>
+            <div class="sidebar-divider"></div>
+            <a href="#" class="nav-item" onclick="switchTab('tab-members', this)"><i class="fas fa-users"></i> Anggota</a>
+            <a href="#" class="nav-item" onclick="switchTab('tab-admin', this)"><i class="fas fa-user-shield"></i> Panel Admin</a>
+        </nav>
+        <div class="sidebar-footer">
+            <div class="user-info">
+                <i class="fas fa-user-circle"></i>
+                <span id="user-name-display">Admin</span>
+                <span class="admin-badge">Admin</span>
+            </div>
+            <a href="#" class="nav-item logout" onclick="handleLogout()"><i class="fas fa-sign-out-alt"></i> Keluar</a>
+        </div>
+    </aside>
+
+    <main class="main-content">
+        <button class="mobile-menu" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+
+        <!-- TAB: Dashboard -->
+        <div id="tab-dashboard" class="tab active">
+            <h2>Selamat Datang, <span id="welcome-name">Admin</span>!</h2>
+            <div class="summary-cards">
+                <div class="summary-card income">
+                    <div class="summary-icon"><i class="fas fa-arrow-down"></i></div>
+                    <div>
+                        <p>Pemasukan</p>
+                        <h3 id="total-income">Rp 0</h3>
+                    </div>
+                </div>
+                <div class="summary-card expense">
+                    <div class="summary-icon"><i class="fas fa-arrow-up"></i></div>
+                    <div>
+                        <p>Pengeluaran</p>
+                        <h3 id="total-expense">Rp 0</h3>
+                    </div>
+                </div>
+                <div class="summary-card balance">
+                    <div class="summary-icon"><i class="fas fa-wallet"></i></div>
+                    <div>
+                        <p>Saldo</p>
+                        <h3 id="total-balance">Rp 0</h3>
+                    </div>
+                </div>
+            </div>
+
+            <div class="recent-section">
+                <h3>Transaksi Terakhir</h3>
+                <div id="recent-transactions" class="transaction-list"></div>
+            </div>
+        </div>
+
+        <!-- TAB: Tambah Transaksi -->
+        <div id="tab-add" class="tab">
+            <h2>Tambah Transaksi</h2>
+            <form id="form-transaction" onsubmit="addTransaction(event)">
+                <div class="form-row">
+                    <div class="input-group">
+                        <label>Jenis</label>
+                        <select id="tx-type" required>
+                            <option value="expense">Pengeluaran</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label>Jumlah (Rp)</label>
+                        <input type="number" id="tx-amount" placeholder="0" min="1" required>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label>Keterangan</label>
+                    <input type="text" id="tx-desc" placeholder="Contoh: Uang jajan, Gaji bulanan" required>
+                </div>
+                <div class="input-group">
+                    <label>Kategori</label>
+                    <select id="tx-category" required>
+                        <option value="umum">Umum</option>
+                        <option value="makanan">Makanan & Minuman</option>
+                        <option value="transportasi">Transportasi</option>
+                        <option value="belanja">Belanja</option>
+                        <option value="tagihan">Tagihan</option>
+                        <option value="hiburan">Hiburan</option>
+                        <option value="gaji">Gaji / Penghasilan</option>
+                        <option value="lainnya">Lainnya</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label>Tanggal</label>
+                    <input type="date" id="tx-date" required>
+                </div>
+                <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Simpan Transaksi</button>
+            </form>
+        </div>
+
+        <!-- TAB: Riwayat -->
+        <div id="tab-history" class="tab">
+            <h2>Riwayat Transaksi</h2>
+            <div class="filter-bar">
+                <input type="text" id="search-input" placeholder="Cari transaksi..." oninput="renderHistory()">
+                <select id="filter-type" onchange="renderHistory()">
+                    <option value="all">Semua</option>
+                    <option value="income">Pemasukan</option>
+                    <option value="expense">Pengeluaran</option>
+                </select>
+            </div>
+            <div id="history-list" class="transaction-list"></div>
+        </div>
+
+        <!-- TAB: Laporan -->
+        <div id="tab-report" class="tab">
+            <h2>Laporan Keuangan</h2>
+            <div class="report-period">
+                <label>Dari:</label>
+                <input type="date" id="report-start" onchange="renderReport()">
+                <label>Sampai:</label>
+                <input type="date" id="report-end" onchange="renderReport()">
+            </div>
+            <div class="report-summary">
+                <div class="report-card income">
+                    <h4>Total Pemasukan</h4>
+                    <h2 id="report-income">Rp 0</h2>
+                </div>
+                <div class="report-card expense">
+                    <h4>Total Pengeluaran</h4>
+                    <h2 id="report-expense">Rp 0</h2>
+                </div>
+                <div class="report-card balance">
+                    <h4>Selisih</h4>
+                    <h2 id="report-balance">Rp 0</h2>
+                </div>
+            </div>
+
+            <div class="chart-section">
+                <h3>Grafik Pemasukan vs Pengeluaran</h3>
+                <div id="bar-chart" class="bar-chart"></div>
+            </div>
+
+            <div class="category-breakdown">
+                <h3>Breakdown per Kategori</h3>
+                <div id="category-list" class="category-list"></div>
+            </div>
+
+            <button class="btn-primary" onclick="exportCSV()"><i class="fas fa-download"></i> Export CSV</button>
+        </div>
+
+        <!-- TAB: Anggota & Kas Bulanan -->
+        <div id="tab-members" class="tab">
+            <h2><i class="fas fa-users"></i> Daftar Anggota & Kas Bulanan</h2>
+
+            <!-- Form Tambah Anggota -->
+            <div class="member-form-section">
+                <h3><i class="fas fa-user-plus"></i> Tambah Anggota</h3>
+                <div class="admin-card">
+                    <form id="form-member" onsubmit="addMember(event)">
+                        <div class="form-row">
+                            <div class="input-group">
+                                <label>Nama Anggota</label>
+                                <input type="text" id="member-name" placeholder="Nama lengkap" required>
+                            </div>
+                            <div class="input-group">
+                                <label>No. Telepon</label>
+                                <input type="text" id="member-phone" placeholder="08xxxxxxxxxx">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="input-group">
+                                <label>Kategori</label>
+                                <select id="member-category" required>
+                                    <option value="pelajar">Pelajar</option>
+                                    <option value="kerja">Kerja</option>
+                                </select>
+                            </div>
+                            <div class="input-group">
+                                <label>Iuran Kas per Bulan (Rp)</label>
+                                <input type="number" id="member-amount" placeholder="10000" min="0" value="10000" required>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn-primary"><i class="fas fa-plus"></i> Tambah Anggota</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Filter Bulan -->
+            <div class="member-filter">
+                <div class="admin-card">
+                    <div class="filter-row">
+                        <div class="input-group">
+                            <label>Filter Bulan</label>
+                            <input type="month" id="kas-month" onchange="renderMembers()">
+                        </div>
+                        <div class="input-group">
+                            <label>Filter Kategori</label>
+                            <select id="filter-member-category" onchange="renderMembers()">
+                                <option value="all">Semua</option>
+                                <option value="pelajar">Pelajar</option>
+                                <option value="kerja">Kerja</option>
+                            </select>
+                        </div>
+                        <div class="kas-summary" id="kas-summary"></div>
+                        <div style="margin-top:12px">
+                            <button type="button" class="btn-wa" onclick="sendWAReminder()"><i class="fab fa-whatsapp"></i> Kirim Reminder WA</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabel Anggota -->
+            <div class="member-table-section">
+                <div class="admin-card">
+                    <div id="members-list" class="members-list"></div>
+                </div>
+            </div>
+
+            <!-- Matrix Pembayaran Per Bulan -->
+            <div class="kas-history-section">
+                <h3><i class="fas fa-table"></i> Status Bayar Per Bulan</h3>
+                <div class="admin-card">
+                    <div id="monthly-matrix" class="monthly-matrix"></div>
+                </div>
+            </div>
+
+            <!-- Riwayat Pembayaran -->
+            <div class="kas-history-section">
+                <h3><i class="fas fa-history"></i> Riwayat Pembayaran Kas</h3>
+                <div class="admin-card">
+                    <div id="kas-history-list" class="kas-history-list"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB: Admin Panel -->
+        <div id="tab-admin" class="tab">
+            <h2><i class="fas fa-user-shield"></i> Panel Admin</h2>
+
+            <div class="admin-section">
+                <h3><i class="fas fa-user-cog"></i> Profil Admin</h3>
+                <div class="admin-card">
+                    <form id="form-admin-profile" onsubmit="updateAdminProfile(event)">
+                        <div class="form-row">
+                            <div class="input-group">
+                                <label>Nama</label>
+                                <input type="text" id="admin-name" placeholder="Nama admin" required>
+                            </div>
+                            <div class="input-group">
+                                <label>Email</label>
+                                <input type="email" id="admin-email" placeholder="Email admin" required>
+                            </div>
+                        </div>
+                        <div class="input-group">
+                            <label>Password Baru (kosongkan jika tidak diubah)</label>
+                            <input type="password" id="admin-password" placeholder="Masukkan password baru" minlength="6">
+                        </div>
+                        <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Simpan Profil</button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="admin-section">
+                <h3><i class="fab fa-whatsapp"></i> Pengaturan WhatsApp (Fonnte)</h3>
+                <div class="admin-card">
+                    <p style="font-size:0.85rem;color:var(--gray-500);margin-bottom:12px">
+                        Masukkan API Key dari <a href="https://fonnte.com" target="_blank" style="color:var(--primary)">fonnte.com</a> untuk mengirim pesan otomatis.
+                    </p>
+                    <div class="form-row">
+                        <div class="input-group" style="flex:1">
+                            <label>API Key Fonnte</label>
+                            <input type="text" id="fonnte-api-key" placeholder="Masukkan API Key Fonnte">
+                        </div>
+                        <div class="input-group" style="flex:0 0 auto;display:flex;align-items:flex-end">
+                            <button type="button" class="btn-primary" onclick="saveFonnteKey()" style="margin-bottom:0"><i class="fas fa-save"></i> Simpan</button>
+                        </div>
+                    </div>
+                    <div id="fonnte-status" style="margin-top:8px;font-size:0.85rem"></div>
+                </div>
+            </div>
+
+            <div class="admin-section">
+                <h3><i class="fas fa-database"></i> Manajemen Data</h3>
+                <div class="admin-card">
+                    <div class="admin-actions">
+                        <button class="btn-admin" onclick="exportAllData()"><i class="fas fa-download"></i> Backup Semua Data</button>
+                        <button class="btn-admin btn-admin-danger" onclick="document.getElementById('import-file').click()"><i class="fas fa-upload"></i> Restore Data</button>
+                        <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(event)">
+                        <button class="btn-admin btn-admin-danger" onclick="confirmClearAllData()"><i class="fas fa-trash-alt"></i> Hapus Semua Data</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="admin-section">
+                <h3><i class="fas fa-info-circle"></i> Informasi Sistem</h3>
+                <div class="admin-card">
+                    <div class="admin-info">
+                        <div class="info-row">
+                            <span>Versi Aplikasi</span>
+                            <strong>1.0.0</strong>
+                        </div>
+                        <div class="info-row">
+                            <span>Total Transaksi</span>
+                            <strong id="admin-total-tx">0</strong>
+                        </div>
+                        <div class="info-row">
+                            <span>Ukuran Data</span>
+                            <strong id="admin-data-size">0 KB</strong>
+                        </div>
+                        <div class="info-row">
+                            <span>Terakhir Aktif</span>
+                            <strong id="admin-last-active">-</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- ==================== TOAST ==================== -->
+<div id="toast" class="toast"></div>
+
+<!-- ==================== MODAL RIWAYAT ANGGOTA ==================== -->
+<div id="member-detail-modal" class="modal-overlay" onclick="if(event.target===this)closeMemberDetail()">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3><i class="fas fa-user"></i> Riwayat Pembayaran</h3>
+            <button class="modal-close" onclick="closeMemberDetail()"><i class="fas fa-times"></i></button>
+        </div>
+        <div id="member-detail-body" class="modal-body"></div>
+    </div>
+</div>
+
+<!-- ==================== MODAL WA REMINDER ==================== -->
+<div id="wa-reminder-modal" class="modal-overlay" onclick="if(event.target===this)closeWAReminder()">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3><i class="fab fa-whatsapp"></i> Kirim Reminder ke Anggota</h3>
+            <button class="modal-close" onclick="closeWAReminder()"><i class="fas fa-times"></i></button>
+        </div>
+        <div id="wa-reminder-body" class="modal-body"></div>
+    </div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
