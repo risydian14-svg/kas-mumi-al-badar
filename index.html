@@ -10,7 +10,7 @@
 <body>
 
 <!-- ==================== LANDING PAGE ==================== -->
-<div id="page-landing" class="page active">
+<div id="page-landing" class="page">
     <nav class="landing-nav">
         <div class="logo"><img src="logo.jpeg" alt="Logo" class="logo-img"> Kas Mumi Al-Badar</div>
         <div class="nav-links">
@@ -59,7 +59,7 @@
 </div>
 
 <!-- ==================== LOGIN ==================== -->
-<div id="page-login" class="page">
+<div id="page-login" class="page active">
     <div class="auth-container">
         <div class="auth-card">
             <div class="auth-header">
@@ -78,7 +78,7 @@
                 </div>
                 <button type="submit" class="btn-primary btn-full"><i class="fas fa-sign-in-alt"></i> Masuk</button>
             </form>
-            <p class="auth-switch" id="login-setup-link" style="display:none">Belum punya akun admin? <a href="#" onclick="showPage('page-setup')">Buat Akun Admin</a></p>
+            <p class="auth-switch" id="login-setup-link" style="display:none"></p>
             <div style="margin-top:16px;text-align:center;border-top:1px solid var(--gray-200);padding-top:14px">
                 <p style="font-size:0.8rem;color:var(--gray-400);margin-bottom:8px">Punya file backup? Restore data di sini</p>
                 <button class="btn-admin" onclick="document.getElementById('login-import-file').click()" style="font-size:0.85rem;width:100%;justify-content:center"><i class="fas fa-upload"></i> Import Data dari Backup</button>
