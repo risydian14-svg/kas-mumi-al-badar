@@ -1378,10 +1378,17 @@ function initDefaultMembers() {
 }
 
 // ==================== INIT ====================
+function initDefaultAdmin() {
+    if (!hasAdmin()) {
+        saveAdmin({ name: 'Admin', email: 'admin@gmail.com', password: 'admin354' });
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('tx-date').value = new Date().toISOString().split('T')[0];
     document.getElementById('kas-month').value = new Date().toISOString().substring(0, 7);
     document.getElementById('recap-month').value = new Date().toISOString().substring(0, 7);
+    initDefaultAdmin();
     initDefaultMembers();
     checkSession();
 });
