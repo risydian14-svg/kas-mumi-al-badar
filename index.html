@@ -79,6 +79,11 @@
                 <button type="submit" class="btn-primary btn-full"><i class="fas fa-sign-in-alt"></i> Masuk</button>
             </form>
             <p class="auth-switch" id="login-setup-link" style="display:none">Belum punya akun admin? <a href="#" onclick="showPage('page-setup')">Buat Akun Admin</a></p>
+            <div style="margin-top:16px;text-align:center;border-top:1px solid var(--gray-200);padding-top:14px">
+                <p style="font-size:0.8rem;color:var(--gray-400);margin-bottom:8px">Punya file backup? Restore data di sini</p>
+                <button class="btn-admin" onclick="document.getElementById('login-import-file').click()" style="font-size:0.85rem;width:100%;justify-content:center"><i class="fas fa-upload"></i> Import Data dari Backup</button>
+                <input type="file" id="login-import-file" accept=".json" style="display:none" onchange="importData(event)">
+            </div>
             <button class="btn-back" onclick="showPage('page-landing')"><i class="fas fa-arrow-left"></i> Kembali</button>
         </div>
     </div>

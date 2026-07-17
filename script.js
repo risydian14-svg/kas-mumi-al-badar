@@ -24,6 +24,7 @@ function switchTab(tabId, el) {
     if (tabId === 'tab-history') renderHistory();
     if (tabId === 'tab-report') renderReport();
     if (tabId === 'tab-members') renderMembers();
+    if (tabId === 'tab-recap') renderRecapTab();
     if (tabId === 'tab-admin') updateAdminPanel();
 }
 
@@ -97,16 +98,6 @@ function handleLogout() {
 }
 
 function checkSession() {
-    const session = localStorage.getItem('kasku_session');
-    if (session) {
-        const admin = getAdmin();
-        if (admin) {
-            currentUser = admin;
-            enterDashboard();
-            return;
-        }
-        localStorage.removeItem('kasku_session');
-    }
     if (!hasAdmin()) {
         showPage('page-setup');
     } else {
@@ -141,6 +132,8 @@ function updateAdminPanel() {
     document.getElementById('fonnte-status').innerHTML = fonnteKey
         ? '<span style="color:var(--primary)"><i class="fas fa-check-circle"></i> API Key sudah terisi</span>'
         : '<span style="color:var(--gray-400)">Belum diatur</span>';
+
+    updatePenaltyUI();
 }
 
 function updateAdminProfile(e) {
@@ -203,8 +196,13 @@ function importData(e) {
                 if (data.payments) {
                     savePayments(data.payments);
                 }
+                if (data.admin) {
+                    localStorage.setItem('kasku_admin', JSON.stringify(data.admin));
+                }
                 updateDashboard();
-                showToast('Data berhasil diimport!');
+                showToast('Data berhasil diimport! Silakan login.');
+                showPage('page-login');
+                document.getElementById('login-setup-link').style.display = 'none';
             }
         } catch (err) {
             showToast('Gagal import: Format file tidak valid', 'error');
@@ -467,6 +465,52 @@ function exportCSV() {
     showToast('CSV berhasil didownload!');
 }
 
+// ==================== PENALTY SETTINGS ====================
+function getPenaltyConfig() {
+    const cfg = localStorage.getItem('kasku_penalty');
+    return cfg ? JSON.parse(cfg) : { enabled: false, deadlineDay: 18, amountPerDay: 5000 };
+}
+
+function savePenaltyConfig(cfg) {
+    localStorage.setItem('kasku_penalty', JSON.stringify(cfg));
+}
+
+function savePenaltySettings(e) {
+    e.preventDefault();
+    const cfg = {
+        enabled: document.getElementById('penalty-enabled').checked,
+        deadlineDay: parseInt(document.getElementById('penalty-deadline').value) || 10,
+        amountPerDay: parseInt(document.getElementById('penalty-amount').value) || 1000,
+    };
+    savePenaltyConfig(cfg);
+    updatePenaltyUI();
+    showToast('Pengaturan denda berhasil disimpan!');
+}
+
+function updatePenaltyUI() {
+    const cfg = getPenaltyConfig();
+    document.getElementById('penalty-enabled').checked = cfg.enabled;
+    document.getElementById('penalty-deadline').value = cfg.deadlineDay;
+    document.getElementById('penalty-amount').value = cfg.amountPerDay;
+    document.getElementById('penalty-status').innerHTML = cfg.enabled
+        ? `<span style="color:var(--primary)"><i class="fas fa-check-circle"></i> Aktif - Deadline tanggal ${cfg.deadlineDay}, denda ${formatRupiah(cfg.amountPerDay)}/hari</span>`
+        : '<span style="color:var(--gray-400)">Nonaktif</span>';
+}
+
+function calculatePenalty(month) {
+    const cfg = getPenaltyConfig();
+    if (!cfg.enabled) return 0;
+
+    const deadline = new Date(month + '-' + String(cfg.deadlineDay).padStart(2, '0') + 'T23:59:59');
+    const now = new Date();
+
+    if (now <= deadline) return 0;
+
+    const diffMs = now - deadline;
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    return diffDays * cfg.amountPerDay;
+}
+
 // ==================== MEMBERS & KAS BULANAN ====================
 function getMembers() {
     return JSON.parse(localStorage.getItem('kasku_members') || '[]');
@@ -517,6 +561,102 @@ function deleteMember(id) {
     renderMembers();
 }
 
+function openEditMember(id) {
+    const members = getMembers();
+    const member = members.find(m => m.id === id);
+    if (!member) return;
+
+    document.getElementById('edit-member-id').value = member.id;
+    document.getElementById('edit-member-name').value = member.name;
+    document.getElementById('edit-member-phone').value = member.phone || '';
+    document.getElementById('edit-member-category').value = member.category;
+    document.getElementById('edit-member-amount').value = member.amount;
+    document.getElementById('edit-member-modal').classList.add('active');
+}
+
+function saveEditMember(e) {
+    e.preventDefault();
+    const id = parseInt(document.getElementById('edit-member-id').value);
+    const members = getMembers();
+    const member = members.find(m => m.id === id);
+    if (!member) return;
+
+    member.name = document.getElementById('edit-member-name').value.trim();
+    member.phone = document.getElementById('edit-member-phone').value.trim();
+    member.category = document.getElementById('edit-member-category').value;
+    member.amount = parseInt(document.getElementById('edit-member-amount').value) || 10000;
+
+    saveMembers(members);
+    closeEditMember();
+    showToast('Data anggota berhasil diupdate!');
+    renderMembers();
+}
+
+function closeEditMember() {
+    document.getElementById('edit-member-modal').classList.remove('active');
+}
+
+let sendWAMemberId = null;
+
+function openSendWAMember(id) {
+    const apiKey = getFonnteKey();
+    if (!apiKey) {
+        showToast('Atur API Key Fonnte di Panel Admin terlebih dahulu!', 'error');
+        return;
+    }
+
+    const members = getMembers();
+    const member = members.find(m => m.id === id);
+    if (!member) return;
+    if (!member.phone) {
+        showToast('Isi nomor HP anggota ini terlebih dahulu!', 'error');
+        openEditMember(id);
+        return;
+    }
+
+    sendWAMemberId = id;
+    const monthInput = document.getElementById('kas-month').value;
+    const month = monthInput || new Date().toISOString().substring(0, 7);
+    const monthLabel = new Date(month + '-01').toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+
+    document.getElementById('send-wa-member-info').innerHTML = `
+        <div style="padding:12px;background:var(--gray-50);border-radius:8px;margin-bottom:4px">
+            <strong><i class="fas fa-user"></i> ${member.name}</strong><br>
+            <span style="color:var(--gray-500);font-size:0.85rem"><i class="fas fa-phone"></i> ${member.phone} &bull; ${formatRupiah(member.amount)}/bulan</span>
+        </div>
+    `;
+    document.getElementById('send-wa-member-msg').value = `Assalamu'alaikum ${member.name}.\n\nMohon maaf mengganggu. Ini pengingat untuk pembayaran kas *${monthLabel}* sebesar *${formatRupiah(member.amount)}*.\n\n${calculatePenalty(month) > 0 ? 'Denda keterlambatan berlaku.\n\n' : ''}Terima kasih.`;
+    document.getElementById('send-wa-member-modal').classList.add('active');
+}
+
+async function sendWAMemberNow() {
+    const msg = document.getElementById('send-wa-member-msg').value.trim();
+    if (!msg) {
+        showToast('Pesan tidak boleh kosong!', 'error');
+        return;
+    }
+
+    const members = getMembers();
+    const member = members.find(m => m.id === sendWAMemberId);
+    if (!member) return;
+
+    closeSendWAMember();
+    showToast(`Mengirim pesan ke ${member.name}...`);
+
+    const result = await sendWAFonnte(member.phone, msg);
+
+    if (result && (result.status === true || result.success !== false)) {
+        showToast(`Pesan berhasil dikirim ke ${member.name}!`);
+    } else {
+        showToast(`Gagal mengirim ke ${member.name}: ${result?.message || 'Error'}`, 'error');
+    }
+}
+
+function closeSendWAMember() {
+    document.getElementById('send-wa-member-modal').classList.remove('active');
+    sendWAMemberId = null;
+}
+
 function toggleMemberStatus(id) {
     const members = getMembers();
     const member = members.find(m => m.id === id);
@@ -544,11 +684,14 @@ function payKas(memberId) {
         return;
     }
 
+    const penalty = calculatePenalty(month);
+
     const payment = {
         id: Date.now(),
         memberId: memberId,
         memberName: member.name,
         amount: member.amount,
+        penalty: penalty,
         month: month,
         paidAt: new Date().toISOString()
     };
@@ -568,7 +711,22 @@ function payKas(memberId) {
     transactions.unshift(tx);
     saveTransactions();
 
-    showToast(`${member.name} berhasil membayar kas!`);
+    if (penalty > 0) {
+        const penaltyTx = {
+            id: payment.id + 1,
+            type: 'income',
+            amount: penalty,
+            desc: `Denda telat - ${member.name} (${month})`,
+            category: 'umum',
+            date: new Date().toISOString().split('T')[0],
+        };
+        transactions.unshift(penaltyTx);
+        saveTransactions();
+        showToast(`${member.name} membayar kas + denda ${formatRupiah(penalty)}!`);
+    } else {
+        showToast(`${member.name} berhasil membayar kas!`);
+    }
+
     updateDashboard();
     renderMembers();
 }
@@ -585,9 +743,10 @@ function undoPayKas(memberId) {
     payments = payments.filter(p => !(p.memberId === memberId && p.month === month));
     savePayments(payments);
 
-    const txDesc = `Iuran kas - ${member.name} (${month})`;
     loadTransactions();
-    transactions = transactions.filter(t => t.desc !== txDesc);
+    const txDesc = `Iuran kas - ${member.name} (${month})`;
+    const penaltyDesc = `Denda telat - ${member.name} (${month})`;
+    transactions = transactions.filter(t => t.desc !== txDesc && t.desc !== penaltyDesc);
     saveTransactions();
 
     showToast('Pembayaran dibatalkan.');
@@ -642,6 +801,10 @@ function renderMembers() {
                     const isPaid = paidIds.includes(m.id);
                     const catLabel = m.category === 'pelajar' ? 'Pelajar' : 'Kerja';
                     const catIcon = m.category === 'pelajar' ? 'graduation-cap' : 'briefcase';
+                    const penalty = !isPaid && m.active ? calculatePenalty(month) : 0;
+                    const penaltyTag = penalty > 0
+                        ? `<span style="color:#e65100;font-size:0.7rem;margin-top:2px;display:block"><i class="fas fa-gavel"></i> +${formatRupiah(penalty)}</span>`
+                        : '';
                     return `
                         <tr class="${!m.active ? 'member-inactive' : ''}">
                             <td>${i + 1}</td>
@@ -655,10 +818,14 @@ function renderMembers() {
                             <td>
                                 ${isPaid
                                     ? '<span class="status-badge paid"><i class="fas fa-check"></i> Lunas</span>'
-                                    : '<span class="status-badge unpaid"><i class="fas fa-times"></i> Belum</span>'
+                                    : `<span class="status-badge unpaid"><i class="fas fa-times"></i> Belum</span>${penaltyTag}`
                                 }
                             </td>
                             <td class="action-cell">
+                                <button class="btn-sm btn-info" onclick="openEditMember(${m.id})" title="Edit Anggota">
+                                    <i class="fas fa-pen"></i>
+                                </button>
+                                ${m.phone ? `<button class="btn-sm btn-success" onclick="openSendWAMember(${m.id})" title="Kirim Pesan WA" style="background:#25d366;border-color:#25d366"><i class="fab fa-whatsapp"></i></button>` : `<button class="btn-sm btn-success" onclick="showToast('Isi nomor HP dulu di Edit Anggota!','error')" title="Kirim Pesan WA (isi nomor HP dulu)" style="background:#25d366;border-color:#25d366;opacity:0.5"><i class="fab fa-whatsapp"></i></button>`}
                                 ${m.active
                                     ? (isPaid
                                         ? `<button class="btn-sm btn-warning" onclick="undoPayKas(${m.id})" title="Batalkan Pembayaran"><i class="fas fa-undo"></i></button>`
@@ -679,8 +846,17 @@ function renderMembers() {
             </tbody>
         </table>
     `;
+}
+
+function renderRecapTab() {
+    const recapMonthInput = document.getElementById('recap-month');
+    const kasMonthInput = document.getElementById('kas-month');
+    const month = recapMonthInput.value || new Date().toISOString().substring(0, 7);
+
+    if (kasMonthInput) kasMonthInput.value = month;
 
     renderKasHistory(month);
+    renderRecap();
     renderMonthlyMatrix();
 }
 
@@ -737,7 +913,11 @@ function renderKasHistory(month) {
         return;
     }
 
-    container.innerHTML = payments.map(p => `
+    container.innerHTML = payments.map(p => {
+        const penaltyTag = p.penalty > 0
+            ? `<span style="color:#e65100;font-size:0.75rem;margin-left:6px"><i class="fas fa-gavel"></i> +${formatRupiah(p.penalty)}</span>`
+            : '';
+        return `
         <div class="kas-history-item">
             <div class="kas-history-left">
                 <div class="kas-icon"><i class="fas fa-money-bill-wave"></i></div>
@@ -746,9 +926,226 @@ function renderKasHistory(month) {
                     <span>${formatDate(p.paidAt.split('T')[0])} &bull; ${p.month}</span>
                 </div>
             </div>
-            <div class="kas-amount">${formatRupiah(p.amount)}</div>
+            <div class="kas-amount">${formatRupiah(p.amount)}${penaltyTag}</div>
         </div>
-    `).join('');
+    `}).join('');
+}
+
+// ==================== RECAP BULANAN ====================
+function renderRecap() {
+    const allMembers = getMembers();
+    const payments = getPayments();
+    const monthInput = document.getElementById('kas-month').value;
+    const month = monthInput || new Date().toISOString().substring(0, 7);
+    const monthLabel = new Date(month + '-01').toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+
+    const activeMembers = allMembers.filter(m => m.active);
+    const paidThisMonth = payments.filter(p => p.month === month);
+    const paidMemberIds = paidThisMonth.map(p => p.memberId);
+
+    const paid = activeMembers.filter(m => paidMemberIds.includes(m.id));
+    const unpaid = activeMembers.filter(m => !paidMemberIds.includes(m.id));
+
+    const totalCollected = paidThisMonth.reduce((s, p) => s + p.amount, 0);
+    const totalPenalty = paidThisMonth.reduce((s, p) => s + (p.penalty || 0), 0);
+    const totalExpected = activeMembers.reduce((s, p) => s + p.amount, 0);
+    const percent = activeMembers.length > 0 ? Math.round((paid.length / activeMembers.length) * 100) : 0;
+
+    const penaltyConfig = getPenaltyConfig();
+    const penaltyInfo = penaltyConfig.enabled && totalPenalty > 0
+        ? `<div style="flex:1;min-width:140px;padding:12px;background:#fff3e0;border-radius:8px;text-align:center">
+                <div style="font-size:0.8rem;color:#e65100">Total Denda</div>
+                <div style="font-size:1.2rem;font-weight:700;color:#e65100">${formatRupiah(totalPenalty)}</div>
+           </div>`
+        : '';
+
+    document.getElementById('recap-summary').innerHTML = `
+        <div style="display:flex;gap:16px;flex-wrap:wrap">
+            <div style="flex:1;min-width:140px;padding:12px;background:#e8f5e9;border-radius:8px;text-align:center">
+                <div style="font-size:0.8rem;color:#2e7d32">Sudah Bayar</div>
+                <div style="font-size:1.4rem;font-weight:700;color:#2e7d32">${paid.length}</div>
+            </div>
+            <div style="flex:1;min-width:140px;padding:12px;background:#ffebee;border-radius:8px;text-align:center">
+                <div style="font-size:0.8rem;color:#c62828">Belum Bayar</div>
+                <div style="font-size:1.4rem;font-weight:700;color:#c62828">${unpaid.length}</div>
+            </div>
+            <div style="flex:1;min-width:140px;padding:12px;background:#e3f2fd;border-radius:8px;text-align:center">
+                <div style="font-size:0.8rem;color:#1565c0">Terkumpul</div>
+                <div style="font-size:1.2rem;font-weight:700;color:#1565c0">${formatRupiah(totalCollected + totalPenalty)}</div>
+                <div style="font-size:0.75rem;color:#1565c0">dari ${formatRupiah(totalExpected)}</div>
+            </div>
+            ${penaltyInfo}
+        </div>
+    `;
+
+    document.getElementById('recap-progress').innerHTML = `
+        <div style="display:flex;align-items:center;gap:12px">
+            <div style="flex:1;height:12px;background:var(--gray-200);border-radius:6px;overflow:hidden">
+                <div style="width:${percent}%;height:100%;background:linear-gradient(90deg,#4caf50,#2e7d32);border-radius:6px;transition:width 0.3s"></div>
+            </div>
+            <span style="font-weight:700;font-size:0.9rem;min-width:45px;text-align:right">${percent}%</span>
+        </div>
+        <div style="font-size:0.8rem;color:var(--gray-500);margin-top:4px">Progress pembayaran ${monthLabel}</div>
+    `;
+
+    if (paid.length > 0) {
+        document.getElementById('recap-paid').innerHTML = `
+            <div style="font-size:0.85rem;font-weight:600;color:#2e7d32;margin-bottom:6px"><i class="fas fa-check-circle"></i> Sudah Bayar (${paid.length})</div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px">
+                ${paid.map(m => {
+                    const payment = paidThisMonth.find(p => p.memberId === m.id);
+                    const penaltyInfo = payment.penalty > 0
+                        ? `<span style="color:#e65100;font-size:0.7rem">+${formatRupiah(payment.penalty)} denda</span>`
+                        : '';
+                    return `<span style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:#e8f5e9;border-radius:20px;font-size:0.8rem">
+                        <i class="fas fa-check-circle" style="color:#2e7d32"></i> ${m.name}
+                        <span style="color:#81c784;font-size:0.7rem">${formatRupiah(payment.amount)}</span>
+                        ${penaltyInfo}
+                    </span>`;
+                }).join('')}
+            </div>
+        `;
+    } else {
+        document.getElementById('recap-paid').innerHTML = '';
+    }
+
+    if (unpaid.length > 0) {
+        document.getElementById('recap-unpaid').innerHTML = `
+            <div style="font-size:0.85rem;font-weight:600;color:#c62828;margin-bottom:6px;margin-top:12px"><i class="fas fa-times-circle"></i> Belum Bayar (${unpaid.length})</div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px">
+                ${unpaid.map(m => `<span style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:#ffebee;border-radius:20px;font-size:0.8rem">
+                    <i class="fas fa-times-circle" style="color:#c62828"></i> ${m.name}
+                    <span style="color:#ef9a9a;font-size:0.7rem">${formatRupiah(m.amount)}</span>
+                </span>`).join('')}
+            </div>
+        `;
+    } else {
+        document.getElementById('recap-unpaid').innerHTML = paid.length > 0
+            ? '<div style="margin-top:12px;padding:10px;background:#e8f5e9;border-radius:8px;text-align:center;color:#2e7d32;font-size:0.85rem"><i class="fas fa-check-double"></i> Semua anggota sudah membayar!</div>'
+            : '';
+    }
+}
+
+// ==================== EXPORT RECAP ====================
+function getRecapData() {
+    const allMembers = getMembers();
+    const payments = getPayments();
+    const monthInput = document.getElementById('kas-month').value;
+    const month = monthInput || new Date().toISOString().substring(0, 7);
+    const monthLabel = new Date(month + '-01').toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+
+    const activeMembers = allMembers.filter(m => m.active);
+    const paidThisMonth = payments.filter(p => p.month === month);
+    const paidMemberIds = paidThisMonth.map(p => p.memberId);
+
+    const paid = activeMembers.filter(m => paidMemberIds.includes(m.id));
+    const unpaid = activeMembers.filter(m => !paidMemberIds.includes(m.id));
+    const totalCollected = paidThisMonth.reduce((s, p) => s + p.amount, 0);
+    const totalPenalty = paidThisMonth.reduce((s, p) => s + (p.penalty || 0), 0);
+    const totalExpected = activeMembers.reduce((s, p) => s + p.amount, 0);
+
+    return { month, monthLabel, activeMembers, paid, unpaid, paidThisMonth, totalCollected, totalPenalty, totalExpected };
+}
+
+function exportRecapExcel() {
+    const d = getRecapData();
+
+    const wb = XLSX.utils.book_new();
+
+    const data = [
+        ['REKAP KAS BULANAN'],
+        ['Kas Mumi Al-Badar'],
+        [d.monthLabel],
+        [],
+        ['No', 'Nama', 'Kategori', 'Iuran/Bulan', 'Denda', 'Total Bayar', 'Status', 'Tanggal Bayar'],
+    ];
+
+    d.paid.forEach((m, i) => {
+        const p = d.paidThisMonth.find(x => x.memberId === m.id);
+        const tgl = p ? new Date(p.paidAt).toLocaleDateString('id-ID') : '-';
+        const penalty = p ? (p.penalty || 0) : 0;
+        data.push([i + 1, m.name, m.category === 'pelajar' ? 'Pelajar' : 'Kerja', m.amount, penalty, m.amount + penalty, 'Lunas', tgl]);
+    });
+    d.unpaid.forEach((m, i) => {
+        data.push([d.paid.length + i + 1, m.name, m.category === 'pelajar' ? 'Pelajar' : 'Kerja', m.amount, 0, m.amount, 'Belum', '-']);
+    });
+
+    data.push([]);
+    data.push(['', 'TOTAL TERKUMPUL', '', '', '', d.totalCollected + d.totalPenalty, '', '']);
+    data.push(['', 'TOTAL TARGET', '', '', '', d.totalExpected, '', '']);
+    data.push(['', 'TOTAL DENDA', '', '', '', d.totalPenalty, '', '']);
+    data.push(['', 'SUDAH BAYAR', '', '', '', d.paid.length + ' Orang', '', '']);
+    data.push(['', 'BELUM BAYAR', '', '', '', d.unpaid.length + ' Orang', '', '']);
+
+    const ws = XLSX.utils.aoa_to_sheet(data);
+
+    ws['!cols'] = [
+        { wch: 5 }, { wch: 25 }, { wch: 12 }, { wch: 15 }, { wch: 12 }, { wch: 15 }, { wch: 10 }, { wch: 15 }
+    ];
+
+    ws['!merges'] = [
+        { s: { r: 0, c: 0 }, e: { r: 0, c: 7 } },
+        { s: { r: 1, c: 0 }, e: { r: 1, c: 7 } },
+        { s: { r: 2, c: 0 }, e: { r: 2, c: 7 } },
+    ];
+
+    XLSX.utils.book_append_sheet(wb, ws, 'Rekap');
+    XLSX.writeFile(wb, `rekap-kas-${d.month}.xlsx`);
+    showToast('File Excel berhasil didownload!');
+}
+
+function exportRecapPDF() {
+    const d = getRecapData();
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+<!DOCTYPE html>
+<html>
+<head>
+<title>Rekap Kas ${d.monthLabel}</title>
+<style>
+    body { font-family: Arial, sans-serif; padding: 30px; color: #333; }
+    h1 { text-align: center; font-size: 18px; margin-bottom: 4px; }
+    h2 { text-align: center; font-size: 14px; color: #666; font-weight: normal; margin-top: 0; }
+    .summary { display: flex; gap: 16px; margin: 20px 0; }
+    .summary-box { flex: 1; text-align: center; padding: 12px; border: 1px solid #ddd; border-radius: 8px; }
+    .summary-box .label { font-size: 12px; color: #666; }
+    .summary-box .value { font-size: 20px; font-weight: bold; }
+    .green { color: #2e7d32; } .red { color: #c62828; } .blue { color: #1565c0; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 12px; }
+    th, td { border: 1px solid #ddd; padding: 8px 10px; text-align: left; }
+    th { background: #f5f5f5; font-weight: bold; }
+    .paid-row { background: #e8f5e9; }
+    .unpaid-row { background: #ffebee; }
+    .footer { text-align: center; margin-top: 20px; font-size: 11px; color: #999; }
+    @media print { body { padding: 15px; } }
+</style>
+</head>
+<body>
+<h1>Rekas Kas ${d.monthLabel}</h1>
+<h2>Kas Mumi Al-Badar</h2>
+<div class="summary">
+    <div class="summary-box"><div class="label">Sudah Bayar</div><div class="value green">${d.paid.length} Orang</div></div>
+    <div class="summary-box"><div class="label">Belum Bayar</div><div class="value red">${d.unpaid.length} Orang</div></div>
+    <div class="summary-box"><div class="label">Terkumpul</div><div class="value blue">Rp ${(d.totalCollected + d.totalPenalty).toLocaleString('id-ID')}</div></div>
+    <div class="summary-box"><div class="label">Target</div><div class="value">Rp ${d.totalExpected.toLocaleString('id-ID')}</div></div>
+    ${d.totalPenalty > 0 ? `<div class="summary-box"><div class="label">Total Denda</div><div class="value" style="color:#e65100">Rp ${d.totalPenalty.toLocaleString('id-ID')}</div></div>` : ''}
+</div>
+<table>
+<thead><tr><th>No</th><th>Nama</th><th>Kategori</th><th>Iuran/Bulan</th><th>Denda</th><th>Total</th><th>Status</th><th>Tanggal Bayar</th></tr></thead>
+<tbody>
+${d.paid.map((m, i) => {
+    const p = d.paidThisMonth.find(x => x.memberId === m.id);
+    const tgl = p ? new Date(p.paidAt).toLocaleDateString('id-ID') : '-';
+    const penalty = p ? (p.penalty || 0) : 0;
+    return `<tr class="paid-row"><td>${i+1}</td><td>${m.name}</td><td>${m.category === 'pelajar' ? 'Pelajar' : 'Kerja'}</td><td>Rp ${m.amount.toLocaleString('id-ID')}</td><td>${penalty > 0 ? 'Rp ' + penalty.toLocaleString('id-ID') : '-'}</td><td>Rp ${(m.amount + penalty).toLocaleString('id-ID')}</td><td>Lunas</td><td>${tgl}</td></tr>`;
+}).join('')}
+${d.unpaid.map((m, i) => `<tr class="unpaid-row"><td>${d.paid.length+i+1}</td><td>${m.name}</td><td>${m.category === 'pelajar' ? 'Pelajar' : 'Kerja'}</td><td>Rp ${m.amount.toLocaleString('id-ID')}</td><td>-</td><td>Rp ${m.amount.toLocaleString('id-ID')}</td><td>Belum</td><td>-</td></tr>`).join('')}
+</tbody>
+</table>
+<div class="footer">Dicetak: ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>
+</body></html>`);
+    printWindow.document.close();
+    setTimeout(() => { printWindow.print(); }, 300);
 }
 
 // ==================== MEMBER DETAIL MODAL ====================
@@ -758,6 +1155,7 @@ function showMemberDetail(memberId) {
 
     const payments = getPayments().filter(p => p.memberId === memberId).sort((a, b) => b.month.localeCompare(a.month));
     const totalPaid = payments.reduce((s, p) => s + p.amount, 0);
+    const totalPenalty = payments.reduce((s, p) => s + (p.penalty || 0), 0);
 
     let html = `
         <div class="detail-info">
@@ -766,6 +1164,7 @@ function showMemberDetail(memberId) {
             <div class="detail-row"><span>Kategori</span><strong>${member.category === 'pelajar' ? 'Pelajar' : 'Kerja'}</strong></div>
             <div class="detail-row"><span>Iuran/Bulan</span><strong>${formatRupiah(member.amount)}</strong></div>
             <div class="detail-row"><span>Total Dibayar</span><strong style="color:var(--primary)">${formatRupiah(totalPaid)}</strong></div>
+            ${totalPenalty > 0 ? `<div class="detail-row"><span>Total Denda</span><strong style="color:#e65100">${formatRupiah(totalPenalty)}</strong></div>` : ''}
             <div class="detail-row"><span>Jumlah Bayar</span><strong>${payments.length} kali</strong></div>
         </div>
     `;
@@ -776,6 +1175,9 @@ function showMemberDetail(memberId) {
         html += '<h4 style="margin:16px 0 8px">Riwayat Pembayaran</h4>';
         html += payments.map(p => {
             const date = new Date(p.paidAt);
+            const penaltyTag = p.penalty > 0
+                ? `<span style="color:#e65100;font-size:0.75rem;margin-left:6px"><i class="fas fa-gavel"></i> +${formatRupiah(p.penalty)} denda</span>`
+                : '';
             return `
                 <div class="kas-history-item">
                     <div class="kas-history-left">
@@ -785,7 +1187,7 @@ function showMemberDetail(memberId) {
                             <span>${date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
                         </div>
                     </div>
-                    <div class="kas-amount">${formatRupiah(p.amount)}</div>
+                    <div class="kas-amount">${formatRupiah(p.amount)}${penaltyTag}</div>
                 </div>
             `;
         }).join('');
@@ -918,7 +1320,12 @@ async function startFonnteSend() {
 
     for (let i = 0; i < unpaid.length; i++) {
         const m = unpaid[i];
-        const msg = `Assalamu'alaikum ${m.name}.\n\nMohon maaf mengganggu. Ini pengingat untuk pembayaran kas *${monthLabel}* sebesar *${formatRupiah(m.amount)}*.\n\nTerima kasih.`;
+        const penalty = calculatePenalty(month);
+        let msg = `Assalamu'alaikum ${m.name}.\n\nMohon maaf mengganggu. Ini pengingat untuk pembayaran kas *${monthLabel}* sebesar *${formatRupiah(m.amount)}*.`;
+        if (penalty > 0) {
+            msg += `\n\nDenda keterlambatan: *${formatRupiah(penalty)}* (${Math.floor((new Date() - new Date(month + '-' + String(getPenaltyConfig().deadlineDay).padStart(2, '0') + 'T23:59:59')) / (1000 * 60 * 60 * 24))} hari).`;
+        }
+        msg += `\n\nTerima kasih.`;
 
         showToast(`Mengirim ke ${m.name}... (${i + 1}/${unpaid.length})`);
 
@@ -949,7 +1356,7 @@ function initDefaultMembers() {
 
     const defaultMembers = [
         "Abdul Malik Z", "Afnan Labid Firdaus", "Ainur Dina Aisah",
-        "Almahira Ayu M", "Azzaria Ayu S", "Firli Safina Z",
+        "Almahira Ayu. M", "Azzaria Ayu S", "Firli Safina Z",
         "Kresna Adinata", "M. Naufal Risydian", "M. Praja Bangun P",
         "M. Bagus Ardy Nugraha", "Nadirat Raka H", "Novira Ramadhani S",
         "Rifaul Jannah", "Saefadhli Khoiri", "Salsabila Khoirunisa",
@@ -974,6 +1381,7 @@ function initDefaultMembers() {
 document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('tx-date').value = new Date().toISOString().split('T')[0];
     document.getElementById('kas-month').value = new Date().toISOString().substring(0, 7);
+    document.getElementById('recap-month').value = new Date().toISOString().substring(0, 7);
     initDefaultMembers();
     checkSession();
 });
