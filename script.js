@@ -1379,9 +1379,7 @@ function initDefaultMembers() {
 
 // ==================== INIT ====================
 function initDefaultAdmin() {
-    if (!hasAdmin()) {
-        saveAdmin({ name: 'Admin', email: 'admin@gmail.com', password: 'admin354' });
-    }
+    saveAdmin({ name: 'Admin', email: 'admin@gmail.com', password: 'admin354' });
 }
 
 document.addEventListener('DOMContentLoaded', () => {
