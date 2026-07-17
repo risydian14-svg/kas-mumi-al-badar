@@ -93,7 +93,7 @@ function handleLogout() {
     currentUser = null;
     localStorage.removeItem('kasku_session');
     transactions = [];
-    showPage('page-landing');
+    showPage('page-login');
     showToast('Berhasil keluar.');
 }
 
