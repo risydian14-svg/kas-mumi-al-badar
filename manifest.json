@@ -1,0 +1,26 @@
+{
+  "name": "Kas Mumi Al-Badar - Kelola Uang Kas",
+  "short_name": "Kas Al-Badar",
+  "description": "Aplikasi pengelolaan uang kas bulanan untuk komunitas Mumi Al-Badar",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f5f7fa",
+  "theme_color": "#dc2626",
+  "orientation": "any",
+  "scope": "./",
+  "lang": "id",
+  "icons": [
+    {
+      "src": "logo.jpeg",
+      "sizes": "192x192",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "logo.jpeg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    }
+  ]
+}

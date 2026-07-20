@@ -1352,7 +1352,11 @@ function closeWAReminder() {
 // ==================== DEFAULT MEMBERS ====================
 function initDefaultMembers() {
     const existing = JSON.parse(localStorage.getItem('kasku_members') || '[]');
-    if (existing.length > 0) return;
+    if (existing.length > 0) {
+        existing.forEach(m => { m.category = "kerja"; });
+        localStorage.setItem('kasku_members', JSON.stringify(existing));
+        return;
+    }
 
     const defaultMembers = [
         "Abdul Malik Z", "Afnan Labid Firdaus", "Ainur Dina Aisah",
@@ -1368,7 +1372,7 @@ function initDefaultMembers() {
         id: Date.now() + i,
         name: name,
         phone: "",
-        category: "pelajar",
+        category: "kerja",
         amount: 10000,
         active: true,
         createdAt: new Date().toISOString()

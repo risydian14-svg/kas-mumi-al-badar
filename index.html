@@ -6,6 +6,11 @@
     <title>Kas Mumi Al-Badar - Kelola Uang Kas</title>
     <link rel="stylesheet" href="style.css?v=2">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#dc2626">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="logo.jpeg">
 </head>
 <body>
 
@@ -589,6 +594,13 @@
 </div>
 
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
-<script src="script.js?v=10"></script>
+<script src="script.js?v=11"></script>
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(function(regs) {
+    regs.forEach(function(r) { r.unregister(); });
+  });
+}
+</script>
 </body>
 </html>
