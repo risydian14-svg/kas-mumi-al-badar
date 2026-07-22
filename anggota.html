@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daftar Member - Kas Mumi Al-Badar</title>
+    <link rel="stylesheet" href="style.css?v=2">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#dc2626">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <link rel="apple-touch-icon" href="logo.jpeg">
+</head>
+<body>
+
+<div id="page-members-standalone" class="page active">
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <img src="logo.jpeg" alt="Logo" class="logo-img">
+            <span>Kas Mumi Al-Badar</span>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="index.html" class="nav-item" onclick="localStorage.setItem('kasku_open_tab','tab-dashboard')"><i class="fas fa-home"></i> Dashboard</a>
+            <a href="index.html" class="nav-item" onclick="localStorage.setItem('kasku_open_tab','tab-add')"><i class="fas fa-plus-circle"></i> Tambah Transaksi</a>
+            <a href="index.html" class="nav-item" onclick="localStorage.setItem('kasku_open_tab','tab-history')"><i class="fas fa-history"></i> Riwayat</a>
+            <a href="index.html" class="nav-item" onclick="localStorage.setItem('kasku_open_tab','tab-report')"><i class="fas fa-chart-bar"></i> Laporan</a>
+            <div class="sidebar-divider"></div>
+            <a href="#" class="nav-item active"><i class="fas fa-users"></i> Member <span class="nav-badge" id="nav-member-total"></span></a>
+            <a href="tambah-anggota.html" class="nav-item"><i class="fas fa-user-plus"></i> Tambah Member</a>
+            <a href="index.html" class="nav-item" onclick="localStorage.setItem('kasku_open_tab','tab-recap')"><i class="fas fa-clipboard-check"></i> Rekap</a>
+            <a href="index.html" class="nav-item" onclick="localStorage.setItem('kasku_open_tab','tab-admin')"><i class="fas fa-user-shield"></i> Panel Admin</a>
+        </nav>
+        <div class="sidebar-footer">
+            <div class="user-info">
+                <i class="fas fa-user-circle"></i>
+                <span id="user-name-display">Admin</span>
+                <span class="admin-badge">Admin</span>
+            </div>
+            <a href="#" class="nav-item logout" onclick="handleLogout()"><i class="fas fa-sign-out-alt"></i> Keluar</a>
+        </div>
+    </aside>
+
+    <main class="main-content">
+        <button class="mobile-menu" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+
+        <div class="tab active" id="tab-members-page">
+            <h2><i class="fas fa-users"></i> Daftar Member & Kas Bulanan</h2>
+
+            <div class="member-form-section">
+                <a href="tambah-anggota.html" class="btn-primary" style="text-decoration:none;display:inline-flex;align-items:center;gap:8px"><i class="fas fa-user-plus"></i> Tambah Member Baru</a>
+            </div>
+
+            <div class="member-filter">
+                <div class="admin-card">
+                    <div class="filter-row">
+                        <div class="input-group">
+                            <label>Filter Bulan</label>
+                            <input type="month" id="kas-month" onchange="document.getElementById('recap-month').value=this.value;renderMembers()">
+                        </div>
+                        <div class="input-group">
+                            <label>Filter Kategori</label>
+                            <select id="filter-member-category" onchange="renderMembers()">
+                                <option value="all">Semua</option>
+                                <option value="pelajar">Pelajar</option>
+                                <option value="kerja">Kerja</option>
+                            </select>
+                        </div>
+                        <div class="kas-summary" id="kas-summary"></div>
+                        <div style="margin-top:12px">
+                            <button type="button" class="btn-wa" onclick="sendWAReminder()"><i class="fab fa-whatsapp"></i> Kirim Reminder WA</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="member-table-section">
+                <div class="admin-card">
+                    <div id="members-list" class="members-list"></div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- MODAL EDIT ANGGOTA -->
+<div id="edit-member-modal" class="modal-overlay" onclick="if(event.target===this)closeEditMember()">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3><i class="fas fa-user-edit"></i> Edit Anggota</h3>
+            <button class="modal-close" onclick="closeEditMember()"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+            <form id="form-edit-member" onsubmit="saveEditMember(event)">
+                <input type="hidden" id="edit-member-id">
+                <div class="input-group">
+                    <label>Nama Anggota</label>
+                    <input type="text" id="edit-member-name" required>
+                </div>
+                <div class="input-group">
+                    <label>No. Telepon</label>
+                    <input type="text" id="edit-member-phone" placeholder="08xxxxxxxxxx">
+                </div>
+                <div class="input-group">
+                    <label>Kategori</label>
+                    <select id="edit-member-category" required>
+                        <option value="pelajar">Pelajar</option>
+                        <option value="kerja">Kerja</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label>Iuran Kas per Bulan (Rp)</label>
+                    <input type="number" id="edit-member-amount" min="0" required>
+                </div>
+                <button type="submit" class="btn-primary" style="width:100%;justify-content:center;margin-top:8px"><i class="fas fa-save"></i> Simpan Perubahan</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL KIRIM WA PER ANGGOTA -->
+<div id="send-wa-member-modal" class="modal-overlay" onclick="if(event.target===this)closeSendWAMember()">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3><i class="fab fa-whatsapp"></i> Kirim Pesan WA</h3>
+            <button class="modal-close" onclick="closeSendWAMember()"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+            <div id="send-wa-member-info" style="margin-bottom:12px"></div>
+            <div class="input-group">
+                <label>Pesan</label>
+                <textarea id="send-wa-member-msg" rows="6" style="width:100%;padding:10px;border:1px solid var(--gray-300);border-radius:8px;font-family:inherit;resize:vertical" placeholder="Tulis pesan..."></textarea>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:12px">
+                <button class="btn-wa" onclick="sendWAMemberNow()" style="flex:1;justify-content:center"><i class="fab fa-whatsapp"></i> Kirim Sekarang</button>
+                <button class="btn-back" onclick="closeSendWAMember()" style="flex:0 0 auto">Batal</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL RIWAYAT ANGGOTA -->
+<div id="member-detail-modal" class="modal-overlay" onclick="if(event.target===this)closeMemberDetail()">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3><i class="fas fa-user"></i> Riwayat Pembayaran</h3>
+            <button class="modal-close" onclick="closeMemberDetail()"><i class="fas fa-times"></i></button>
+        </div>
+        <div id="member-detail-body" class="modal-body"></div>
+    </div>
+</div>
+
+<!-- MODAL WA REMINDER -->
+<div id="wa-reminder-modal" class="modal-overlay" onclick="if(event.target===this)closeWAReminder()">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3><i class="fab fa-whatsapp"></i> Kirim Reminder ke Anggota</h3>
+            <button class="modal-close" onclick="closeWAReminder()"><i class="fas fa-times"></i></button>
+        </div>
+        <div id="wa-reminder-body" class="modal-body"></div>
+    </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<script src="script.js?v=11"></script>
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(function(regs) {
+    regs.forEach(function(r) { r.unregister(); });
+  });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('kas-month').value = new Date().toISOString().substring(0, 7);
+    initDefaultAdmin();
+    initDefaultMembers();
+    if (!hasAdmin()) {
+        window.location.href = 'index.html';
+        return;
+    }
+    currentUser = getAdmin();
+    document.getElementById('user-name-display').textContent = currentUser.name;
+    loadTransactions();
+    renderMembers();
+});
+</script>
+</body>
+</html>

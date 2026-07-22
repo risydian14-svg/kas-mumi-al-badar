@@ -2,6 +2,8 @@ const CACHE_NAME = 'kas-albadar-v2';
 const ASSETS = [
   './',
   './index.html',
+  './anggota.html',
+  './tambah-anggota.html',
   './style.css',
   './script.js',
   './logo.jpeg',

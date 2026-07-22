@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+/* font loaded via system fonts */
 
 * {
     margin: 0;
@@ -472,6 +472,21 @@ body {
     background: var(--primary);
     color: white;
     box-shadow: 0 2px 8px rgba(16,185,129,0.3);
+}
+
+.nav-badge {
+    background: var(--primary);
+    color: white;
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 10px;
+    margin-left: auto;
+    line-height: 1;
+}
+
+.nav-item.active .nav-badge {
+    background: rgba(255,255,255,0.3);
 }
 
 .sidebar-footer {
@@ -964,9 +979,41 @@ body {
 .summary-mini-item.paid { color: var(--primary); background: var(--primary-50); border-color: rgba(16,185,129,0.15); }
 .summary-mini-item.collected { color: var(--purple); background: var(--purple-light); border-color: rgba(139,92,246,0.15); }
 .summary-mini-item.expected { color: var(--gray-500); }
+.summary-mini-item.penalty { color: #e65100; background: #fff3e0; border-color: rgba(230,81,0,0.15); }
+
+.member-total-bar {
+    margin-top: 12px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.member-total-item {
+    flex: 1;
+    min-width: 150px;
+    padding: 10px 16px;
+    background: var(--primary-50);
+    border: 1px solid rgba(16,185,129,0.15);
+    border-radius: 8px;
+    color: var(--primary);
+    font-size: 0.85rem;
+}
+
+.member-total-item.penalty {
+    background: #fff3e0;
+    border-color: rgba(230,81,0,0.2);
+    color: #e65100;
+}
+
+.member-total-item.total {
+    background: var(--gray-100);
+    border-color: var(--gray-300);
+    color: var(--gray-700);
+    font-size: 0.95rem;
+}
 
 .member-table { width: 100%; border-collapse: separate; border-spacing: 0; }
-.member-table th, .member-table td { padding: 12px 14px; text-align: left; }
+.member-table th, .member-table td { padding: 12px 14px; text-align: left; white-space: nowrap; }
 
 .member-table th {
     background: var(--gray-50);
@@ -984,6 +1031,8 @@ body {
 .member-table tbody tr { transition: var(--transition); }
 .member-table tbody tr:hover { background: var(--gray-50); }
 .member-table tbody tr.member-inactive { opacity: 0.4; }
+
+.member-table .action-cell { white-space: nowrap; }
 
 .member-name-cell { font-weight: 700; color: var(--gray-800); }
 

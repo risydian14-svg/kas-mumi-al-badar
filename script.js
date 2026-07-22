@@ -85,6 +85,7 @@ function handleLogin(e) {
 
     currentUser = admin;
     localStorage.setItem('kasku_session', JSON.stringify(admin));
+    localStorage.setItem('kasku_saved_credentials', JSON.stringify({ email, password }));
     enterDashboard();
     document.getElementById('form-login').reset();
 }
@@ -94,6 +95,7 @@ function handleLogout() {
     localStorage.removeItem('kasku_session');
     transactions = [];
     showPage('page-login');
+    autoFillLogin();
     showToast('Berhasil keluar.');
 }
 
@@ -102,6 +104,17 @@ function checkSession() {
         showPage('page-setup');
     } else {
         showPage('page-login');
+        autoFillLogin();
+    }
+}
+
+function autoFillLogin() {
+    const saved = JSON.parse(localStorage.getItem('kasku_saved_credentials'));
+    if (saved && saved.email && saved.password) {
+        setTimeout(() => {
+            document.getElementById('login-email').value = saved.email;
+            document.getElementById('login-password').value = saved.password;
+        }, 100);
     }
 }
 
@@ -242,7 +255,7 @@ function addTransaction(e) {
     e.preventDefault();
     const tx = {
         id: Date.now(),
-        type: document.getElementById('tx-type').value,
+        type: 'expense',
         amount: parseInt(document.getElementById('tx-amount').value),
         desc: document.getElementById('tx-desc').value.trim(),
         category: document.getElementById('tx-category').value,
@@ -625,7 +638,7 @@ function openSendWAMember(id) {
             <span style="color:var(--gray-500);font-size:0.85rem"><i class="fas fa-phone"></i> ${member.phone} &bull; ${formatRupiah(member.amount)}/bulan</span>
         </div>
     `;
-    document.getElementById('send-wa-member-msg').value = `Assalamu'alaikum ${member.name}.\n\nMohon maaf mengganggu. Ini pengingat untuk pembayaran kas *${monthLabel}* sebesar *${formatRupiah(member.amount)}*.\n\n${calculatePenalty(month) > 0 ? 'Denda keterlambatan berlaku.\n\n' : ''}Terima kasih.`;
+    document.getElementById('send-wa-member-msg').value = `Assalamu'alaikum ${member.name}.\n\nMohon maaf mengganggu. Ini pengingat untuk pembayaran kas *${monthLabel}* sebesar *${formatRupiah(member.amount)}*.\n\n${calculatePenalty(month) > 0 ? 'Denda keterlambatan berlaku.\n\n' : ''}Terima kasih.\n\nAlhamdulillah, Jazakumullah Khairan.`;
     document.getElementById('send-wa-member-modal').classList.add('active');
 }
 
@@ -762,6 +775,9 @@ function renderMembers() {
     const monthInput = document.getElementById('kas-month').value;
     const month = monthInput || new Date().toISOString().substring(0, 7);
 
+    const memberTotalEl = document.getElementById('nav-member-total');
+    if (memberTotalEl) memberTotalEl.textContent = allMembers.length;
+
     const paidIds = payments.filter(p => p.month === month).map(p => p.memberId);
     const paidCount = paidIds.length;
     const totalExpected = members.filter(m => m.active).length;
@@ -783,6 +799,8 @@ function renderMembers() {
         return;
     }
 
+    const totalPenalty = members.filter(m => m.active && !paidIds.includes(m.id)).reduce((s, m) => s + calculatePenalty(month), 0);
+
     container.innerHTML = `
         <table class="member-table">
             <thead>
@@ -792,6 +810,8 @@ function renderMembers() {
                     <th>Telepon</th>
                     <th>Kategori</th>
                     <th>Iuran/Bulan</th>
+                    <th>Denda</th>
+                    <th>Total</th>
                     <th>Status ${month}</th>
                     <th>Aksi</th>
                 </tr>
@@ -802,9 +822,9 @@ function renderMembers() {
                     const catLabel = m.category === 'pelajar' ? 'Pelajar' : 'Kerja';
                     const catIcon = m.category === 'pelajar' ? 'graduation-cap' : 'briefcase';
                     const penalty = !isPaid && m.active ? calculatePenalty(month) : 0;
-                    const penaltyTag = penalty > 0
-                        ? `<span style="color:#e65100;font-size:0.7rem;margin-top:2px;display:block"><i class="fas fa-gavel"></i> +${formatRupiah(penalty)}</span>`
-                        : '';
+                    const penaltyDisplay = penalty > 0
+                        ? `<span style="color:#e65100;font-weight:600">${formatRupiah(penalty)}</span>`
+                        : '<span style="color:var(--gray-400)">-</span>';
                     return `
                         <tr class="${!m.active ? 'member-inactive' : ''}">
                             <td>${i + 1}</td>
@@ -815,10 +835,12 @@ function renderMembers() {
                             <td>${m.phone || '-'}</td>
                             <td><span class="category-tag ${m.category}"><i class="fas fa-${catIcon}"></i> ${catLabel}</span></td>
                             <td>${formatRupiah(m.amount)}</td>
+                            <td>${penaltyDisplay}</td>
+                            <td style="font-weight:600">${formatRupiah(m.amount + penalty)}</td>
                             <td>
                                 ${isPaid
                                     ? '<span class="status-badge paid"><i class="fas fa-check"></i> Lunas</span>'
-                                    : `<span class="status-badge unpaid"><i class="fas fa-times"></i> Belum</span>${penaltyTag}`
+                                    : '<span class="status-badge unpaid"><i class="fas fa-times"></i> Belum</span>'
                                 }
                             </td>
                             <td class="action-cell">
@@ -845,6 +867,11 @@ function renderMembers() {
                 }).join('')}
             </tbody>
         </table>
+        <div class="member-total-bar">
+            <div class="member-total-item"><i class="fas fa-coins"></i> Total Iuran: <strong>${formatRupiah(totalCollected)}</strong></div>
+            <div class="member-total-item penalty"><i class="fas fa-gavel"></i> Total Denda: <strong>${formatRupiah(totalPenalty)}</strong></div>
+            <div class="member-total-item total"><i class="fas fa-wallet"></i> Total: <strong>${formatRupiah(totalCollected + totalPenalty)}</strong></div>
+        </div>
     `;
 }
 
@@ -1250,7 +1277,7 @@ function formatPhone(phone) {
 
 function getWAUrl(phone, name, amount) {
     const num = formatPhone(phone);
-    const msg = encodeURIComponent(`Assalamu'alaikum ${name}.\n\nMohon maaf mengganggu. Ini pengingat untuk pembayaran kas *${waMonthLabel}* sebesar *${formatRupiah(amount)}*.\n\nTerima kasih.`);
+    const msg = encodeURIComponent(`Assalamu'alaikum ${name}.\n\nMohon maaf mengganggu. Ini pengingat untuk pembayaran kas *${waMonthLabel}* sebesar *${formatRupiah(amount)}*.\n\nTerima kasih.\n\nAlhamdulillah, Jazakumullah Khairan.`);
     return `https://wa.me/${num}?text=${msg}`;
 }
 
@@ -1325,7 +1352,7 @@ async function startFonnteSend() {
         if (penalty > 0) {
             msg += `\n\nDenda keterlambatan: *${formatRupiah(penalty)}* (${Math.floor((new Date() - new Date(month + '-' + String(getPenaltyConfig().deadlineDay).padStart(2, '0') + 'T23:59:59')) / (1000 * 60 * 60 * 24))} hari).`;
         }
-        msg += `\n\nTerima kasih.`;
+        msg += `\n\nTerima kasih.\n\nAlhamdulillah, Jazakumullah Khairan.`;
 
         showToast(`Mengirim ke ${m.name}... (${i + 1}/${unpaid.length})`);
 
@@ -1383,7 +1410,9 @@ function initDefaultMembers() {
 
 // ==================== INIT ====================
 function initDefaultAdmin() {
-    saveAdmin({ name: 'Admin', email: 'admin@gmail.com', password: 'admin354' });
+    if (!hasAdmin()) {
+        saveAdmin({ name: 'Admin', email: 'admin@gmail.com', password: 'admin354' });
+    }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
