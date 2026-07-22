@@ -103,6 +103,15 @@ function checkSession() {
     if (!hasAdmin()) {
         showPage('page-setup');
     } else {
+        const isStandalone = window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
+        if (isStandalone) {
+            const session = JSON.parse(localStorage.getItem('kasku_session'));
+            if (session && session.email) {
+                currentUser = session;
+                enterDashboard();
+                return;
+            }
+        }
         showPage('page-login');
         autoFillLogin();
     }
